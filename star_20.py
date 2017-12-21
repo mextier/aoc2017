@@ -1,7 +1,19 @@
 import re
+import operator
+from itertools import product, izip
+from math import sqrt
+
+eps = 1e-5
 
 with open("star_20.txt", "r") as f:
     lines = filter(bool, f.read().split('\n'))
+
+# lines = filter(bool, """
+# p=<-6,0,0>, v=<3,0,0>, a=<0,0,0>
+# p=<-4,0,0>, v=<2,0,0>, a=<0,0,0>
+# p=<-2,0,0>, v=<1,0,0>, a=<0,0,0>
+# p=<3,0,0>, v=<-1,0,0>, a=<0,0,0>
+# """.split('\n'))
 
 regex = re.compile('^p=<([-0-9]+),([-0-9]+),([-0-9]+)>, '
                    'v=<([-0-9]+),([-0-9]+),([-0-9]+)>, '
@@ -13,7 +25,7 @@ bestdist = (dist**8, None)
 particles = []
 for index, line in enumerate(lines):
     ints = map(long, regex.match(line).groups())
-    p, v, a = tuple(ints[0:3]), tuple(ints[3:6]), tuple(ints[6:9])
+    p, v, a = ints[0:3], ints[3:6], ints[6:9]
 
     # p+vT+aT^2/2
 
@@ -26,31 +38,22 @@ for index, line in enumerate(lines):
 
 print bestdist
 
-while True:
+# tried to code the quadratic solver first, but simulation suffices here
+for steps in xrange(1000):
+    pset = {}
+    for i in xrange(len(particles)-1, -1, -1):
+        p, v, a = particles[i]
+        for j in xrange(3):
+            v[j] += a[j]
+            p[j] += v[j]
+        pt = tuple(p)
+        if pt in pset:
+            removed = True
+            if pset[pt] is not None:
+                del particles[pset[pt]]
+                pset[pt] = None
+            del particles[i]
+        else:
+            pset[pt] = i
+
     print len(particles)
-    removed = False
-
-    k = 0
-    for i in xrange(len(particles)):
-        for j in xrange(i+1, len(particles)):
-            p1, v1, a1 = particles[i]
-            p2, v2, a2 = particles[j]
-
-            k += 1
-            if k > 10:
-                break
-
-            # (p1-p2) + (v1-v2)T + (a1^2-a2^2)*T^2/2
-            #
-
-            ds = map(
-                lambda pc1, vc1, ac1, pc2, vc2, ac2:
-                (vc1-vc2)**2 - 2*(ac1 - ac2)*(ac1 + ac2)*(pc1-pc2),
-                *(particles[i] + particles[j])
-            )
-
-            print ds
-
-
-    if not removed:
-        break
